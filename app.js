@@ -5,11 +5,13 @@
 
   // SoundCloud setup
   SC.initialize({
-    client_id: "20c747bd72eaa3c7d88dbc712ca696b0"
+    client_id: "20c747bd72eaa3c7d88dbc712ca696b0",
+    redirect_uri: "https://dl.dropboxusercontent.com/u/986362/soundmap/callback.html",
   });
 
   // Sound model
   var Sound = Parse.Object.extend("Sound");
+
 
   // User position model
   var UserPosition = Backbone.Model.extend({
@@ -17,9 +19,15 @@
       lat: null,
       lng: null
     },
-     initialize: function(){
-      
-     }
+    getLatitude: function() {
+      return this.get("lat");
+    },
+    getLongitude: function() {
+      return this.get("lng");
+    },
+    setPosition: function(lat, lng) {
+      this.set({ lat: lat, lng: lng });
+    }
   });
 
   // View for displaying user position
@@ -35,20 +43,19 @@
     },
     render: function() {
       console.log("Rendering position view");
-      var m = this.model.toJSON();
-      this.$el.html("Position: " + m.lat + ", " + m.lng);  
+      this.$el.html("Position: " + this.model.getLatitude() + ", " + this.model.getLongitude());  
       return this;
     },
 
     update: function(position) {
       console.log("Updating position in view");
-      this.model.set({ lat: position.coords.latitude, lng: position.coords.longitude  });
+      this.model.setPosition(position.coords.latitude, position.coords.longitude);
     }
   });
 
 
   var AppView = Backbone.View.extend({
-    el: $("#container"),
+    el: $("#player-container"),
 
     events: {
       'click button#play-by-position': 'startStream'
@@ -57,10 +64,13 @@
     initialize: function(){
        _.bindAll(this, 'render', 'playByPosition', 'startStream'); 
 
-      this.render();
-      this.addUserPosition(this.model);
+      // User position subview
+      this.userPositionView = new UserPositionView({ model: new UserPosition() });   
+      // User login subview
+      this.loginView = new LoginView({ model: new UserLogin() });   
 
-      
+      this.render();
+
       // Blank dummy sound, fixingaudio loading issue on mobile browsers
       SC.stream("/tracks/118451467", {
           useHTML5Audio: true,
@@ -72,26 +82,23 @@
     },
 
     render: function(){
+      this.$el.append(this.userPositionView.render().el);
 
       this.$el.append("<button id='play-by-position'>play by location</button>");
-      this.input = this.$('#track-id');
+
+      this.$el.append(this.loginView.render().el);
 
       return this;
     },
 
-    addUserPosition: function(model) {
-        var view = new UserPositionView({
-            'model': model
-        });
-        this.$el.append(view.render().el);
-    },
 
     playByPosition: function() {
 
       // Get current location
-      var m = this.model.toJSON();
-      console.log("Play by current position " + m.lat + "," + m.lng);
-      var userPosition = new Parse.GeoPoint({latitude: m.lat, longitude: m.lng});
+      var userPosition = new Parse.GeoPoint({
+        latitude: this.userPositionView.model.getLatitude(), 
+        longitude: this.userPositionView.model.getLongitude()
+      });
       
       var query = new Parse.Query(Sound);
       query.near("position", userPosition);
@@ -124,9 +131,68 @@
 
   });
 
+  // User login model
+  var UserLogin = Backbone.Model.extend({
+    defaults: {
+      loggedIn: false
+    },
+    isLoggedIn: function() {
+      return this.get('loggedIn');
+    },
+    login: function() {
+      this.set({'loggedIn': true})
+    },
+    logout: function() {
+      this.set({'loggedIn': false})
+    }
+  });
 
-  var userPosition = new UserPosition({ });
-  var appView = new AppView({ model: userPosition });
+  // View for displaying user position
+  LoginView = Backbone.View.extend({
+    el: $("#login-container"),
+
+    events: {
+      'click button#login': 'login',
+      'click button#logout': 'logout'
+    },
+    initialize: function() {
+      _.bindAll(this, 'render', 'login', 'logout');
+      this.model.on('change', this.render);
+      
+      this.render();
+    },
+    render: function() {
+      this.$el.empty();
+
+      if (this.model.isLoggedIn())
+        this.$el.append("<button id='logout'>Log out</button>");
+      else
+        this.$el.append("<button id='login'>Log in to Soundcloud</button>");
+
+      return this;
+    },
+
+    login: function() {
+      var self = this;
+      SC.connect(function(){
+        self.model.login();
+        SC.get('/me', function(me) { 
+          console.log(me.username);
+        }); 
+      })
+    },
+
+    logout: function() {
+      SC.accessToken(null); 
+      this.model.logout();
+      console.log("logout");
+    }
+
+  });  
+
+
+  var appView = new AppView();
+
 
 })(jQuery);
 
