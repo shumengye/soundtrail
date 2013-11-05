@@ -1,37 +1,3 @@
-function setCookie(c_name, value, exdays)
-{
-  console.log("Storing access token " + value);
-  var exdate=new Date();
-  exdate.setDate(exdate.getDate() + exdays);
-  var c_value=escape(value) + ((exdays==null) ? "" : "; expires="+exdate.toUTCString());
-  document.cookie=c_name + "=" + c_value;
-}
-
-function getCookie(c_name)
-{
-  var c_value = document.cookie;
-  var c_start = c_value.indexOf(" " + c_name + "=");
-  if (c_start == -1)
-    {
-    c_start = c_value.indexOf(c_name + "=");
-    }
-  if (c_start == -1)
-    {
-    c_value = null;
-    }
-  else
-    {
-    c_start = c_value.indexOf("=", c_start) + 1;
-    var c_end = c_value.indexOf(";", c_start);
-    if (c_end == -1)
-    {
-  c_end = c_value.length;
-  }
-  c_value = unescape(c_value.substring(c_start,c_end));
-  }
-  return c_value;
-}
-
 (function($){
 
   // Parse setup
@@ -41,8 +7,6 @@ function getCookie(c_name)
   SC.initialize({
     client_id: "20c747bd72eaa3c7d88dbc712ca696b0",
     redirect_uri: "https://dl.dropboxusercontent.com/u/986362/soundmap/callback.html",
-    access_token: getCookie("SC_act"),
-    scope: 'non-expiring'
   });
 
   // Sound model
@@ -172,12 +136,6 @@ function getCookie(c_name)
     defaults: {
       loggedIn: false
     },
-    initialize: function(){
-      // Check if user is already logged in
-      var act=getCookie("SC_act");
-      if (act!=null && act!="")
-        this.set({ loggedIn: true });
-    },
     isLoggedIn: function() {
       return this.get('loggedIn');
     },
@@ -199,8 +157,7 @@ function getCookie(c_name)
     },
     initialize: function() {
       _.bindAll(this, 'render', 'login', 'logout');
-
-      console.log("access " + SC.accessToken());
+console.log("access " + SC.accessToken());
 
       this.model.on('change', this.render);
       
@@ -220,13 +177,8 @@ function getCookie(c_name)
     login: function() {
       var self = this;
       SC.connect(function(){
-        // Update model
         self.model.login();
-        // Store access token
-        setCookie('SC_act', SC.accessToken(), 30);
-
         SC.get('/me/activities', function(data) { 
-          
           console.log(data);
         }); 
       })
@@ -235,7 +187,6 @@ function getCookie(c_name)
     logout: function() {
       SC.accessToken(null); 
       this.model.logout();
-      setCookie('SC_act', null, 30);   
       console.log("logout");
     }
 
@@ -244,6 +195,12 @@ function getCookie(c_name)
 
   var appView = new AppView();
 
+/*
+  var track_url = 'http://soundcloud.com/forss/flickermood';
+SC.oEmbed(track_url, { auto_play: true }, function(oEmbed) {
+  console.log('oEmbed response: ' + oEmbed);
+});
+*/
 
 })(jQuery);
 
