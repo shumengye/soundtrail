@@ -1,0 +1,5 @@
+body {
+  background: #33cccf; }
+  @media screen and (max-device-width: 480px) {
+    body {
+      background: #272727; } }

@@ -1,0 +1,14 @@
+@import 'sass-toolbox';
+
+
+$color1: #33cccf;
+$color2: #272727;
+
+
+body {
+  background: $color1;
+
+  @include iphone {
+    background: $color2;
+  }
+}
