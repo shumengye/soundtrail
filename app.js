@@ -68,48 +68,95 @@ function getCookie(c_name)
     }
   });
 
+  var Track = Backbone.Model.extend({
+    defaults: function() {
+      return {
+        id: null,
+        position: 0
+      };
+    },
+  });
 
-  // View for displaying user position
-  UserPositionView = Backbone.View.extend({
-    initialize: function() {
-      _.bindAll(this, 'render', 'update', 'initLocation', 'showTracksOnMap', 'renderTrack', 'clearMarkers', 'deactivateMarkers');
+  var TrackCollection = Backbone.Collection.extend({
+    model: Track
+  });
 
-      this.listenTo(this.model, 'change', this.render);
+  /*--------------------------------------
+  *
+  *    APP VIEW
+  *
+  --------------------------------------*/
 
-      this.markers = [];
+  var AppView = Backbone.View.extend({
+    el: $("#app-container"),
+
+    events: {
+      'click button#start-trail': 'startTrail',
+      'click button#pause': 'pause',
+      'click button#resume': 'resume'
+    },
+
+    //------------------------------
+    //
+    // Init
+    //
+    //------------------------------
+    initialize: function(){
+       _.bindAll(this, 
+          'initMap', 'onPositionChange', 
+          'getTracksForPosition', 
+          'addTrackAvailable', 'resetTracksAvailable',
+          'addTrackNearby', 'resetTracksNearby',
+          'addTrackToMap',
+          'startTrail', 'playByPosition', 'pause', 'showPlayer'); 
+
+      // Update tracks when user position changes
+      this.listenTo(this.model, 'change', this.getTracksForPosition);  
+
+      // Track collections
+      this.tracksNearby = new TrackCollection();
+      this.tracksNearby.on('add', this.addTrackNearby);
+      this.tracksNearby.on('reset', this.resetTracksNearby);
+
+      this.tracksAvailable = new TrackCollection();
+      this.tracksAvailable.on('add', this.addTrackAvailable);
+      this.tracksAvailable.on('reset', this.resetTracksAvailable);
+
+       // Map variables
+      this.map = $("#map-canvas");
+      this.tracksAvailableMarkers = [];
+      this.tracksNearbyMarkers = [];
 
       // User location
       if (navigator.geolocation) {
         // Init
-        navigator.geolocation.getCurrentPosition(this.initLocation);
+        navigator.geolocation.getCurrentPosition(this.initMap);
         // Keep tracking user position 
-        navigator.geolocation.watchPosition(this.update);
+        navigator.geolocation.watchPosition(this.onPositionChange);
       }
-    },
-    render: function() {
-      console.log("Rendering position view");
-      this.$el.html("Position: " + this.model.getLatitude() + ", " + this.model.getLongitude());  
 
-      // Update user location on map
-      if (this.userMarker)
-        this.userMarker.setPosition(new google.maps.LatLng(this.model.getLatitude(), this.model.getLongitude()));
-
-      // Plot tracks
-      if (this.model.getLatitude())
-        this.showTracksOnMap();
-
-      return this;
+      // Playback
+      this.streamingTrack = null;  // active track being played
+      this.trackId = null;  // id of active track
+ 
+      // Blank dummy sound, fixingaudio loading issue on mobile browsers
+      SC.stream("/tracks/118451467", {
+          useHTML5Audio: true,
+          preferFlash: false
+        }, function(sound){  
+          this.streamingTrack = sound;
+      });
     },
 
-    initLocation: function(position) {      
+    initMap: function(position) {    
+      this.model.setPosition(position.coords.latitude, position.coords.longitude);  
+      // Init map
       google.maps.visualRefresh = true;
-
       var mapOptions = {
         center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
         zoom: 15,
         maxZoom: 17,
         minZoom: 11
-        //mapTypeId: google.maps.MapTypeId.ROADMAP
       } ;
       this.map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
@@ -123,84 +170,96 @@ function getCookie(c_name)
       });
       this.userMarker.setMap(this.map);
 
-      this.model.setPosition(position.coords.latitude, position.coords.longitude);
-
-      var self = this;
-      google.maps.event.addListener(this.map, 'bounds_changed', function() {
-         self.render();
-      });
+      // Redraw tracks when map bounds change
+      google.maps.event.addListener(this.map, 'bounds_changed', this.getTracksForPosition);
     },
 
-    update: function(position) {
-      console.log("Updating position in view");
+    onPositionChange: function(position) {
+      console.log("Updating model position");
       this.model.setPosition(position.coords.latitude, position.coords.longitude);
     },
 
-    showTracksOnMap: function() {
-      this.clearMarkers();
+    //------------------------------
+    //
+    // Track collections
+    //
+    //------------------------------
+    getTracksForPosition: function() {
+      console.log("Update tracks for user position");
 
       var Sound = Parse.Object.extend("Sound");
       var userPosition = new Parse.GeoPoint({ latitude: this.model.getLatitude(), longitude: this.model.getLongitude() });
       var self = this;  
 
-      // Playable tracks
+      // Reset collections
+      this.tracksAvailable.reset();
+      this.tracksNearby.reset();
+
+      // Available tracks for current location
       var query1 = new Parse.Query(Sound);
       var distance = 0.1; // max distance in km
       query1.withinKilometers("position", userPosition, distance);
       query1.find().then(function(tracks) {  
+
         for (var i = 0; i < tracks.length; i++) {
-          self.renderTrack(tracks[i], true);
+          var t = new Track({
+              id: tracks[i].get("trackId"),
+              position: tracks[i].get("position")
+          });
+          self.tracksAvailable.add(t); // Add to collection
         }
       }, function(error) {
         console.log(error);
       });
-
+      
       // All tracks within maps bound, excluding playable tracks
       var query2 = new Parse.Query(Sound);
       query2.doesNotMatchKeyInQuery("trackId", "trackId", query1);
       query2.near("position", userPosition);
-      /*
-      var bounds = this.map.getBounds();
-      var southwest = new Parse.GeoPoint(bounds.getSouthWest().lat(), bounds.getSouthWest().lng());
-      var northeast = new Parse.GeoPoint(bounds.getNorthEast().lat(), bounds.getNorthEast().lat());
-      query2.withinGeoBox("position", southwest, northeast);
-      */
       query2.limit(100);
       query2.find().then(function(tracks) {
         for (var i = 0; i < tracks.length; i++) {
-          self.renderTrack(tracks[i], false);
+          var t = new Track({
+              id: tracks[i].get("trackId"),
+              position: tracks[i].get("position")
+          });
+          self.tracksNearby.add(t); // Add to collection
         }
       }, function(error) {
-        console.log(error);
+          console.log(error);
       });
-
     },
 
-    // Clears and deletes all markers from map
-    clearMarkers: function() {
-      for (var i = 0; i < this.markers.length; i++) {
-        this.markers[i][1].setMap(null);
-      }
-      this.markers = [];
+    addTrackAvailable: function(track) {
+      var marker = this.addTrackToMap(track, true);
+      this.tracksAvailableMarkers.push([track.id, marker]);
     },
 
-    setActiveMarker: function(trackId) {
-      for (var i = 0; i < this.markers.length; i++) {
-        var id = this.markers[i][0];
-        if (id == trackId)
-          this.markers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
-      }
+    resetTracksAvailable: function() {
+      for (var i = 0; i < this.tracksAvailableMarkers.length; i++) 
+        this.tracksAvailableMarkers[i][1].setMap(null);
+      this.tracksAvailableMarkers = [];
     },
 
-    deactivateMarkers: function(trackId) {
-      for (var i = 0; i < this.markers.length; i++) {
-        if (this.markers[i][1].getIcon() == "http://maps.google.com/mapfiles/ms/icons/green-dot.png")
-          this.markers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
-      }
+    addTrackNearby: function(track) {
+      var marker = this.addTrackToMap(track, false);
+      this.tracksNearbyMarkers.push([track.id, marker]);
+      // Highlight active track
+      this.setActiveMarker(this.trackId);
     },
 
-    // Renders a single track
-    renderTrack: function(trackObj, playable) {
+    resetTracksNearby: function() {
+      for (var i = 0; i < this.tracksNearbyMarkers.length; i++) 
+        this.tracksNearbyMarkers[i][1].setMap(null);
+      this.tracksNearbyMarkers = [];
+    },
+
+    //------------------------------
+    //
+    // Show tracks on map
+    //
+    //------------------------------
+    addTrackToMap: function(trackObj, available) {
       var trackId = trackObj.get("trackId");
       // Create marker 
       var position = trackObj.get("position");
@@ -210,9 +269,8 @@ function getCookie(c_name)
         title:""
       });
       marker.setMap(this.map);
-      this.markers.push([trackId, marker]);
 
-      if (playable)
+      if (available)
         marker.setIcon("http://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
       else
         marker.setIcon("http://maps.google.com/mapfiles/ms/icons/red-dot.png");
@@ -221,61 +279,45 @@ function getCookie(c_name)
       SC.get('/tracks/' + trackId, function(track) { 
         marker.setTitle(track.user.username + ": " + track.title);           
       }); 
-    }
 
-  });
-
-  /*--------------------------------------
-  *
-  *    APP VIEW
-  *
-  --------------------------------------*/
-
-  var AppView = Backbone.View.extend({
-    el: $("#player-container"),
-
-    events: {
-      'click button#play-by-position': 'startStream',
-      'click button#pause': 'pause'
+      return marker;
     },
 
-    initialize: function(){
-       _.bindAll(this, 'render', 'playByPosition', 'startStream', 'pause'); 
-
-      // User position subview
-      this.userPositionView = new UserPositionView({ model: new UserPosition() });   
-
-      this.render();
-
-      // Blank dummy sound, fixingaudio loading issue on mobile browsers
-      SC.stream("/tracks/118451467", {
-          useHTML5Audio: true,
-          preferFlash: false
-        }, function(sound){  
-          this.track = sound; 
-      });
-      
+    setActiveMarker: function(trackId) {
+      console.log("active " + trackId);
+      if (trackId != null) {
+        for (var i = 0; i < this.tracksAvailableMarkers.length; i++) {
+          var id = this.tracksAvailableMarkers[i][0];
+          if (id == trackId)
+            this.tracksAvailableMarkers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
+        }
+      }
     },
 
-    render: function(){
-      this.$el.append(this.userPositionView.render().el);
-
-      this.$el.append("<button id='play-by-position'>play by location</button>");
-      this.$el.append("<button id='pause'>pause</button>");
-
-      return this;
+    deactivateMarkers: function(trackId) {
+      for (var i = 0; i < this.tracksAvailableMarkers.length; i++) {
+        if (this.tracksAvailableMarkers[i][1].getIcon() == "http://maps.google.com/mapfiles/ms/icons/green-dot.png")
+          this.tracksAvailableMarkers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
+      }
     },
 
-    currentUserPosition: function() {
-      return [this.userPositionView.model.getLatitude(), this.userPositionView.model.getLongitude()];
+    //------------------------------
+    //
+    // Playback
+    //
+    //------------------------------  
+    startTrail: function() {
+      if (streamingTrack)
+        streamingTrack.play({onfinish: this.playByPosition});
     },
 
     playByPosition: function() {
+      this.trackId = null;
+
       // Get current location
-      var p = this.currentUserPosition();
       var userPosition = new Parse.GeoPoint({
-        latitude: p[0], 
-        longitude: p[1]
+        latitude: this.model.getLatitude(), 
+        longitude: this.model.getLongitude()
       });
 
       var Sound = Parse.Object.extend("Sound");
@@ -283,41 +325,64 @@ function getCookie(c_name)
       //query.near("position", userPosition);
       var distance = 0.1; // max distance in km
       query.withinKilometers("position", userPosition, distance);
-      console.log(distance);
       var self = this;
 
       query.find().then(function(tracks) {
         // Play nearest track
-          var trackId = tracks[0].get("trackId");
+        if (tracks.length == 0) 
+          self.showNoTracksAvailable();
+        else{
           console.log("Fetched track from Parse " + trackId);
+          var trackId = tracks[0].get("trackId");
+          self.trackId = trackId;
 
           SC.stream(trackId, {
             useHTML5Audio: true,
             preferFlash: false
           }, function(sound){
             sound.play({onfinish: self.playByPosition});
-            self.track = sound;
-            self.userPositionView.setActiveMarker(trackId);
-
+            self.streamingTrack = sound;
+            self.setActiveMarker(trackId);
+            // Show track info and controls
+            self.showPlayer(trackId);
           });
+        }
       }, function(error) {
         console.log(error);
        
       }); 
     },
 
-    startStream: function() {
-      track.play({onfinish: this.playByPosition});
+    // Show track info and controls
+    showPlayer: function(trackId) {
+      this.$el.find("#start").hide();
+      var self = this;
+      SC.get('/tracks/' + trackId, function(track) { 
+        self.$el.find("#track-info").html("Now playing: " + track.user.username + ", " + track.title);
+        self.$el.find("#player-container").show();          
+      }); 
     },
 
     pause: function() {
-      this.track.pause();
-      this.userPositionView.deactivateMarkers();
-    }
+      this.streamingTrack.pause();
+      this.deactivateMarkers();
+    },
+
+    resume: function() {
+      this.streamingTrack.resume();
+      this.setActiveMarker(this.trackId);
+    },
+
+    showNoTracksAvailable: function(trackId) {
+      this.$el.find("#player-container").hide();
+      this.$el.find("#track-info").html("");
+      this.$el.find("#status").html("Nothing nearby. Try going closer to a sound.");
+      this.$el.find("#start").show();
+    },
 
   });
 
-  var appView = new AppView();
+  var appView = new AppView({ model: new UserPosition() });
 
 
 })(jQuery);

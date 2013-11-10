@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <title>Trail</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, user-scalable=no">
 
 <link rel="stylesheet" type="text/css" href="styles/app.css">
 
@@ -10,8 +12,20 @@
 
 <body>
 
-<div id="map-canvas"></div>
-<div id="player-container"></div>
+<div id="app-container">
+	<div id="map-canvas"></div>
+	<div id="toolbar">
+		<div id="start">
+			<button id='start-trail'>Start trail</button>
+			<div id="status"></div>
+		</div>
+		<div id="player-container">
+			<div id="track-info"></div>
+			<button id='pause'>Pause</button>
+			<button id='resume'>Resume</button>
+		</div>
+	</div>
+</div>
 
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>

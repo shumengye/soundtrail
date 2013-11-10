@@ -5,6 +5,13 @@ $color1: #33cccf;
 $color2: #272727;
 
 
+html, body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
 body {
   background: $color1;
 
@@ -13,7 +20,36 @@ body {
   }
 }
 
+#app-container {
+	position: relative;
+	width: 100%;
+	height: 100%;
+}
+
 #map-canvas {
-	width: 400px;
-	height: 400px;
+	width: 100%;
+	height: 80%;
+}
+
+#toolbar {
+	width: 100%;
+	height: 20%;
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	
+	#start {
+		padding: 10px 20px;
+		text-align: center;
+
+		#status {
+			margin: 20px auto 0 autp;
+		}
+	}
+	
+	#player-container {
+		padding: 10px 20px;
+		display: none;
+	}
+
 }
