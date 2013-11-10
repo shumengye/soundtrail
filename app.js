@@ -72,9 +72,11 @@ function getCookie(c_name)
   // View for displaying user position
   UserPositionView = Backbone.View.extend({
     initialize: function() {
-      _.bindAll(this, 'render', 'update', 'initLocation', 'drawTracks', 'renderTrack');
+      _.bindAll(this, 'render', 'update', 'initLocation', 'showTracksOnMap', 'renderTrack', 'clearMarkers', 'deactivateMarkers');
 
       this.listenTo(this.model, 'change', this.render);
+
+      this.markers = [];
 
       // User location
       if (navigator.geolocation) {
@@ -88,56 +90,117 @@ function getCookie(c_name)
       console.log("Rendering position view");
       this.$el.html("Position: " + this.model.getLatitude() + ", " + this.model.getLongitude());  
 
+      // Update user location on map
+      if (this.userMarker)
+        this.userMarker.setPosition(new google.maps.LatLng(this.model.getLatitude(), this.model.getLongitude()));
+
+      // Plot tracks
+      if (this.model.getLatitude())
+        this.showTracksOnMap();
+
       return this;
     },
 
-    initLocation: function(position) {
-      this.model.setPosition(position.coords.latitude, position.coords.longitude);
-      console.log("setting location");
-      //this.map.setCenter(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
-      
+    initLocation: function(position) {      
       google.maps.visualRefresh = true;
+
       var mapOptions = {
-            center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
-            zoom: 15,
-            mapTypeId: google.maps.MapTypeId.ROADMAP} ;
+        center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+        zoom: 15,
+        maxZoom: 17,
+        minZoom: 11
+        //mapTypeId: google.maps.MapTypeId.ROADMAP
+      } ;
       this.map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
-      this.drawTracks();
+      // Current user location
+      this.userMarker = new google.maps.Marker({
+        position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6
+        },
+      });
+      this.userMarker.setMap(this.map);
+
+      this.model.setPosition(position.coords.latitude, position.coords.longitude);
+
+      var self = this;
+      google.maps.event.addListener(this.map, 'bounds_changed', function() {
+         self.render();
+      });
     },
 
     update: function(position) {
       console.log("Updating position in view");
       this.model.setPosition(position.coords.latitude, position.coords.longitude);
-
     },
 
-    drawTracks: function() {
+    showTracksOnMap: function() {
+      this.clearMarkers();
+
       var Sound = Parse.Object.extend("Sound");
-      var query = new Parse.Query(Sound);
+      var userPosition = new Parse.GeoPoint({ latitude: this.model.getLatitude(), longitude: this.model.getLongitude() });
+      var self = this;  
 
-      var userPosition = new Parse.GeoPoint({
-        latitude: this.model.getLatitude(), 
-        longitude: this.model.getLongitude()
-      });
-
-      query.near("position", userPosition);
-      query.limit(20);
-      //var distance = 0.1; // max distance in km
-      //query.withinKilometers("position", userPosition, distance);
-
-      var self = this;
-      query.find().then(function(tracks) {
+      // Playable tracks
+      var query1 = new Parse.Query(Sound);
+      var distance = 0.1; // max distance in km
+      query1.withinKilometers("position", userPosition, distance);
+      query1.find().then(function(tracks) {  
         for (var i = 0; i < tracks.length; i++) {
-          self.renderTrack(tracks[i]);
+          self.renderTrack(tracks[i], true);
         }
       }, function(error) {
         console.log(error);
       });
+
+      // All tracks within maps bound, excluding playable tracks
+      var query2 = new Parse.Query(Sound);
+      query2.doesNotMatchKeyInQuery("trackId", "trackId", query1);
+      query2.near("position", userPosition);
+      /*
+      var bounds = this.map.getBounds();
+      var southwest = new Parse.GeoPoint(bounds.getSouthWest().lat(), bounds.getSouthWest().lng());
+      var northeast = new Parse.GeoPoint(bounds.getNorthEast().lat(), bounds.getNorthEast().lat());
+      query2.withinGeoBox("position", southwest, northeast);
+      */
+      query2.limit(100);
+      query2.find().then(function(tracks) {
+        for (var i = 0; i < tracks.length; i++) {
+          self.renderTrack(tracks[i], false);
+        }
+      }, function(error) {
+        console.log(error);
+      });
+
+    },
+
+    // Clears and deletes all markers from map
+    clearMarkers: function() {
+      for (var i = 0; i < this.markers.length; i++) {
+        this.markers[i][1].setMap(null);
+      }
+      this.markers = [];
+    },
+
+    setActiveMarker: function(trackId) {
+      for (var i = 0; i < this.markers.length; i++) {
+        var id = this.markers[i][0];
+        if (id == trackId)
+          this.markers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
+      }
+    },
+
+    deactivateMarkers: function(trackId) {
+      for (var i = 0; i < this.markers.length; i++) {
+        if (this.markers[i][1].getIcon() == "http://maps.google.com/mapfiles/ms/icons/green-dot.png")
+          this.markers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
+      }
     },
 
     // Renders a single track
-    renderTrack: function(trackObj) {
+    renderTrack: function(trackObj, playable) {
       var trackId = trackObj.get("trackId");
       // Create marker 
       var position = trackObj.get("position");
@@ -147,12 +210,16 @@ function getCookie(c_name)
         title:""
       });
       marker.setMap(this.map);
+      this.markers.push([trackId, marker]);
+
+      if (playable)
+        marker.setIcon("http://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
+      else
+        marker.setIcon("http://maps.google.com/mapfiles/ms/icons/red-dot.png");
 
       // Get other track info from SC
       SC.get('/tracks/' + trackId, function(track) { 
-        //console.log(track); 
-        marker.setTitle(track.user.username + ": " + track.title); 
-          
+        marker.setTitle(track.user.username + ": " + track.title);           
       }); 
     }
 
@@ -168,11 +235,12 @@ function getCookie(c_name)
     el: $("#player-container"),
 
     events: {
-      'click button#play-by-position': 'startStream'
+      'click button#play-by-position': 'startStream',
+      'click button#pause': 'pause'
     },
 
     initialize: function(){
-       _.bindAll(this, 'render', 'playByPosition', 'startStream'); 
+       _.bindAll(this, 'render', 'playByPosition', 'startStream', 'pause'); 
 
       // User position subview
       this.userPositionView = new UserPositionView({ model: new UserPosition() });   
@@ -193,6 +261,7 @@ function getCookie(c_name)
       this.$el.append(this.userPositionView.render().el);
 
       this.$el.append("<button id='play-by-position'>play by location</button>");
+      this.$el.append("<button id='pause'>pause</button>");
 
       return this;
     },
@@ -218,29 +287,32 @@ function getCookie(c_name)
       var self = this;
 
       query.find().then(function(tracks) {
-
         // Play nearest track
           var trackId = tracks[0].get("trackId");
-
           console.log("Fetched track from Parse " + trackId);
 
           SC.stream(trackId, {
             useHTML5Audio: true,
             preferFlash: false
           }, function(sound){
-
             sound.play({onfinish: self.playByPosition});
+            self.track = sound;
+            self.userPositionView.setActiveMarker(trackId);
+
           });
       }, function(error) {
         console.log(error);
        
-      });
-      
-
+      }); 
     },
 
     startStream: function() {
       track.play({onfinish: this.playByPosition});
+    },
+
+    pause: function() {
+      this.track.pause();
+      this.userPositionView.deactivateMarkers();
     }
 
   });
