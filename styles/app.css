@@ -3,3 +3,7 @@ body {
   @media screen and (max-device-width: 480px) {
     body {
       background: #272727; } }
+
+#map-canvas {
+  width: 400px;
+  height: 400px; }
