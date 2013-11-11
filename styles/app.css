@@ -24,6 +24,17 @@ a {
   z-index: 100;
   width: 52px; }
 
+#addbutton {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  z-index: 100;
+  width: 40px; }
+  @media screen and (max-device-width: 480px) {
+    #addbutton {
+      top: 15px;
+      right: 15px; } }
+
 #app-container {
   position: relative;
   width: 100%;
@@ -98,3 +109,37 @@ a {
       padding: 8px 16px; }
     #toolbar #player-container #resumestream {
       display: none; }
+
+#map-container {
+  visibility: hidden; }
+  #map-container #create-map {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 20; }
+  #map-container .mapbuttons {
+    width: 260px;
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    z-index: 20;
+    text-align: center; }
+    #map-container .mapbuttons .cancel, #map-container .mapbuttons .save {
+      padding: 10px 20px;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      -ms-border-radius: 5px;
+      -o-border-radius: 5px;
+      border-radius: 5px;
+      -webkit-background-clip: padding-box;
+      -moz-background-clip: padding-box;
+      background-clip: padding-box;
+      background: #00bff3;
+      color: #fff;
+      cursor: pointer; }
+    #map-container .mapbuttons .cancel {
+      background: #ababab; }

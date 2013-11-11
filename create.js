@@ -195,11 +195,11 @@ function getCookie(c_name)
   // View for displaying user position
   TrackView = Backbone.View.extend({
     events: {
-      'click button#add-to-map': 'addTrackToMap'
+      'click button#add-to-map': 'addLocationToTrack'
     },
 
     initialize: function() {
-      _.bindAll(this, 'render', 'addTrackToMap');
+      _.bindAll(this, 'render', 'addLocationToTrack');
 
       this.parent = this.options.parent;
 
@@ -214,22 +214,8 @@ function getCookie(c_name)
       return this;
     },
 
-    addTrackToMap: function () {
-      var Sound = Parse.Object.extend("Sound");
-      var sound = new Sound();
-       
-      sound.set("trackId", this.model.get("id") + "");
-      var point = this.parent.currentUserPosition();
-      sound.set("position", new Parse.GeoPoint({ latitude: point[0], longitude: point[1] }));
-       
-      sound.save(null, {
-        success: function(sound) {
-          console.log("track added to map");
-        },
-        error: function(sound, error) {
-          console.log(error.description);
-        }
-      });
+    addLocationToTrack: function () {
+      this.parent.addLocationToTrack(this.model.get("id"));
     }
   });
 
@@ -246,7 +232,7 @@ function getCookie(c_name)
     },
 
     initialize: function() {
-      _.bindAll(this, 'render', 'search', 'addOne', 'addAll');
+      _.bindAll(this, 'render', 'search', 'addOne', 'addAll', 'addLocationToTrack');
 
       this.collection = new TrackCollection();
 
@@ -262,7 +248,7 @@ function getCookie(c_name)
     render: function() {
       console.log("render search");
       this.$el.append("<input type='text' id='search-field' >");
-      this.$el.append("<button id='search'>Search track</button>");  
+      this.$el.append("<button id='search'>Search for sound</button>");  
       this.input = $("#search-field");
 
       this.$el.append("<div id='search-result'></div>");  
@@ -294,6 +280,10 @@ function getCookie(c_name)
 
     addAll: function() {
       this.collection.each(this.addOne, this);
+    },
+
+    addLocationToTrack: function(trackId) {
+      this.parent.addLocationToTrack(trackId);
     }
   });
 
@@ -305,23 +295,24 @@ function getCookie(c_name)
   --------------------------------------*/
 
   var AppView = Backbone.View.extend({
-    el: $("#player-container"),
+    el: $("#create-container"),
 
     events: {
-      'click button#play-by-position': 'startStream'
+      'click .save': 'saveTrackLocation',
+      'click .cancel': 'cancelTrackLocation'
     },
 
     initialize: function(){
-       _.bindAll(this, 'render', 'playByPosition', 'startStream'); 
-
-      // User position subview
-      this.userPositionView = new UserPositionView({ model: new UserPosition() });   
+       _.bindAll(this, 'render', 'initMap', 'addLocationToTrack', 'saveTrackLocation', 'cancelTrackLocation'); 
+ 
       // User login subview
-      this.loginView = new LoginView({ model: new UserLogin() });
+      //this.loginView = new LoginView({ model: new UserLogin() });
       // Trackearch subview
       this.searchView = new SearchTrackView({ parent: this });  
-
       this.render();
+
+      if (navigator.geolocation)
+        navigator.geolocation.getCurrentPosition(this.initMap);
 
       // Blank dummy sound, fixingaudio loading issue on mobile browsers
       SC.stream("/tracks/118451467", {
@@ -333,59 +324,69 @@ function getCookie(c_name)
       
     },
 
-    render: function(){
-      this.$el.append(this.userPositionView.render().el);
+    render: function() {
 
-      this.$el.append("<button id='play-by-position'>play by location</button>");
-
-      this.$el.append(this.loginView.render().el);
-
-      this.$el.append(this.searchView.render().el);
+      this.$el.find("#search-container").append(this.searchView.render().el);
 
       return this;
     },
 
-    currentUserPosition: function() {
-      return [this.userPositionView.model.getLatitude(), this.userPositionView.model.getLongitude()];
+    initMap: function(position) {
+      google.maps.visualRefresh = true;
+      var mapOptions = {
+        center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+        zoom: 15,
+        maxZoom: 17,
+        minZoom: 11,
+        streetViewControl: false,
+        mapTypeControl: false,
+        zoomControlOptions: {
+          position: google.maps.ControlPosition.LEFT_CENTER
+        }
+      };
+      this.map = new google.maps.Map(document.getElementById("create-map"), mapOptions);
+      this.mapElem = $("#map-container");
+
+      this.positionMarker = new google.maps.Marker({ map: this.map });
+
+      var self = this;
+      google.maps.event.addListener(this.map, 'click', function(event) {
+        self.positionMarker.setPosition(event.latLng);
+      });
     },
 
-    playByPosition: function() {
+    addLocationToTrack: function(trackId) {
+      this.trackId = trackId;
+      this.mapElem.css("visibility", "visible");
+    },
 
-      // Get current location
-      var p = this.currentUserPosition();
-      var userPosition = new Parse.GeoPoint({
-        latitude: p[0], 
-        longitude: p[1]
-      });
-
+    saveTrackLocation: function() {
+      //console.log("track " + this.trackId);
+      if (!this.positionMarker.getPosition())
+        return;
       var Sound = Parse.Object.extend("Sound");
-      var query = new Parse.Query(Sound);
-      query.near("position", userPosition);
-      var self = this;
- 
-      query.first({
-        success: function(object) {
-          var trackId = object.get("trackId");
-          console.log("Fetched track from Parse " + trackId);
-
-          SC.stream(trackId, {
-            useHTML5Audio: true,
-            preferFlash: false
-          }, function(sound){
-
-            sound.play({onfinish: self.playByPosition});
-          });
-          
+      var sound = new Sound();
+       
+      sound.set("trackId", this.trackId + "");
+      sound.set("position", new Parse.GeoPoint({ 
+        latitude: this.positionMarker.getPosition().lat(), 
+        longitude: this.positionMarker.getPosition().lng()
+      }));
+       
+      sound.save(null, {
+        success: function(sound) {
+          console.log("track added to map");
+          this.mapElem.css("visibility", "hidden");
         },
-        error: function(error) {
-          alert("Error: " + error.code + " " + error.message);
+        error: function(sound, error) {
+          console.log(error);
         }
       });
 
     },
 
-    startStream: function() {
-      track.play({onfinish: this.playByPosition});
+    cancelTrackLocation: function() {
+      this.mapElem.css("visibility", "hidden");
     }
 
   });

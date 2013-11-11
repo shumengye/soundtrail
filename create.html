@@ -2,7 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Trail</title>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+
+<title>Trail – Create new</title>
 
 <link rel="stylesheet" type="text/css" href="styles/app.css">
 
@@ -10,21 +12,29 @@
 
 <body>
 
+<div id="create-container">
+	<div id="login-container"></div>
+	<div id="search-container"></div>
 
-<div id="player-container"></div>
+	<div id="map-container">
+		<div id="create-map"></div>
 
-<div id="login-container"></div>
-
-<div id="search-container"></div>
+		<div class="mapbuttons">
+			<span class="cancel">Cancel</span>
+			<span class="save">Save location</span>
+		</div>
+	</div>
+</div>
 
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpVC_Ab-qqq96a9kLYo7cjtSG_rZU4wOA&sensor=true"></script>
 <script src="underscore-min.js"></script>
 <script src="backbone-min.js"></script>
 <script src="parse-1.2.12.min.js"></script>
 <script src="//connect.soundcloud.com/sdk.js"></script>
 
-<script src="app.js"></script>
+<script src="create.js"></script>
 
 </body>
 

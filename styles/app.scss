@@ -46,6 +46,19 @@ a {
 	width: 52px;
 }
 
+#addbutton {
+	position: absolute;
+	top: 20px;
+	right: 30px;
+	z-index: 100;
+	width: 40px;
+
+	@include iphone {
+		top: 15px;
+		right: 15px;
+	}
+}
+
 #app-container {
 	position: relative;
 	width: 100%;
@@ -132,5 +145,41 @@ a {
 			display: none;
 		}
 	}
+}
 
+#map-container {
+	visibility: hidden;
+
+	#create-map {
+		width: 100%;
+		height: 100%;
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 20;
+	}
+
+	.mapbuttons {
+		width: 260px;
+		position: absolute;
+		bottom: 20px;
+		left: 0;
+		right: 0;
+		margin: 0 auto;
+		z-index: 20;
+		text-align: center;
+
+		.cancel, .save {
+			padding: 10px 20px;
+			@include border-radius(5px);
+			background: $maincolor;
+			color: #fff;
+			cursor: pointer;
+		}
+
+		.cancel {
+			background: #ababab;
+		}
+	}
+	
 }

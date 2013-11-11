@@ -1,36 +1,4 @@
-function setCookie(c_name, value, exdays)
-{
-  console.log("Storing access token " + value);
-  var exdate=new Date();
-  exdate.setDate(exdate.getDate() + exdays);
-  var c_value=escape(value) + ((exdays==null) ? "" : "; expires="+exdate.toUTCString());
-  document.cookie=c_name + "=" + c_value;
-}
 
-function getCookie(c_name)
-{
-  var c_value = document.cookie;
-  var c_start = c_value.indexOf(" " + c_name + "=");
-  if (c_start == -1)
-    {
-    c_start = c_value.indexOf(c_name + "=");
-    }
-  if (c_start == -1)
-    {
-    c_value = null;
-    }
-  else
-    {
-    c_start = c_value.indexOf("=", c_start) + 1;
-    var c_end = c_value.indexOf(";", c_start);
-    if (c_end == -1)
-    {
-  c_end = c_value.length;
-  }
-  c_value = unescape(c_value.substring(c_start,c_end));
-  }
-  return c_value;
-}
 
 (function($){
 
@@ -41,7 +9,6 @@ function getCookie(c_name)
   SC.initialize({
     client_id: "20c747bd72eaa3c7d88dbc712ca696b0",
     redirect_uri: "https://dl.dropboxusercontent.com/u/986362/soundmap/callback.html",
-    access_token: getCookie("SC_act"),
     scope: 'non-expiring'
   });  
 
