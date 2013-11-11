@@ -16,13 +16,20 @@
 	<div id="map-canvas"></div>
 	<div id="toolbar">
 		<div id="start">
-			<button id='start-trail'>Start trail</button>
-			<div id="status"></div>
+			<div id='start-trail'>
+				<div class="label">Play sound</div>
+			</div>
+			<div id="no-tracks">
+				<div class="label">No sounds nearby.<br>Try moving closer to one</div>
+			</div>
+			<div id="loading">
+				<div class="label">Fetching sounds near you...</div>
+			</div>
 		</div>
 		<div id="player-container">
-			<div id="track-info"></div>
-			<button id='pause'>Pause</button>
-			<button id='resume'>Resume</button>
+			<a id="trackinfo" href="" target="_blank"></a>
+			<img id='pausestream' src="assets/pause_icon.svg">
+			<img id='resumestream' src="assets/play_icon.svg">
 		</div>
 	</div>
 </div>

@@ -72,7 +72,7 @@ function getCookie(c_name)
     defaults: function() {
       return {
         id: null,
-        position: 0
+        position: 0  // Parse GeoPoint
       };
     },
   });
@@ -91,9 +91,9 @@ function getCookie(c_name)
     el: $("#app-container"),
 
     events: {
-      'click button#start-trail': 'startTrail',
-      'click button#pause': 'pause',
-      'click button#resume': 'resume'
+      'click #start-trail': 'startTrail',
+      'click #pausestream': 'pauseStream',
+      'click #resumestream': 'resumeStream'
     },
 
     //------------------------------
@@ -108,7 +108,7 @@ function getCookie(c_name)
           'addTrackAvailable', 'resetTracksAvailable',
           'addTrackNearby', 'resetTracksNearby',
           'addTrackToMap',
-          'startTrail', 'playByPosition', 'pause', 'showPlayer'); 
+          'startTrail', 'playByPosition', 'pauseStream', 'resumeStream', 'showPlayer'); 
 
       // Update tracks when user position changes
       this.listenTo(this.model, 'change', this.getTracksForPosition);  
@@ -156,17 +156,20 @@ function getCookie(c_name)
         center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
         zoom: 15,
         maxZoom: 17,
-        minZoom: 11
+        minZoom: 11,
+        streetViewControl: false,
+        mapTypeControl: false,
+        zoomControlOptions: {
+
+        position: google.maps.ControlPosition.LEFT_TOP
+        }
       } ;
       this.map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
       // Current user location
       this.userMarker = new google.maps.Marker({
         position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 6
-        },
+        icon: "assets/userposition.svg"
       });
       this.userMarker.setMap(this.map);
 
@@ -200,6 +203,12 @@ function getCookie(c_name)
       var distance = 0.1; // max distance in km
       query1.withinKilometers("position", userPosition, distance);
       query1.find().then(function(tracks) {  
+        if (tracks.length > 0)
+          self.showPlaySound();
+        if (tracks.length == 0 && self.$el.find("#loading").css("display") == "block") {
+          self.$el.find("#loading").hide();
+          self.$el.find("#no-tracks").show();
+        }
 
         for (var i = 0; i < tracks.length; i++) {
           var t = new Track({
@@ -230,9 +239,18 @@ function getCookie(c_name)
       });
     },
 
-    addTrackAvailable: function(track) {
-      var marker = this.addTrackToMap(track, true);
-      this.tracksAvailableMarkers.push([track.id, marker]);
+    addTrackAvailable: function(trackObj) {
+      var self = this;
+      SC.get('/tracks/' + trackObj.get("id"), function(track) { 
+        var title = track.user.username + ": " + track.title;
+        if (track.artwork_url)
+          var artwork = track.artwork_url;
+        else
+          var artwork = track.user.avatar_url;
+
+        var marker = self.addTrackToMap(trackObj.get("id"), trackObj.get("position"), artwork, title, true); 
+        self.tracksAvailableMarkers.push([trackObj.id, marker]);         
+      });  
     },
 
     resetTracksAvailable: function() {
@@ -241,11 +259,18 @@ function getCookie(c_name)
       this.tracksAvailableMarkers = [];
     },
 
-    addTrackNearby: function(track) {
-      var marker = this.addTrackToMap(track, false);
-      this.tracksNearbyMarkers.push([track.id, marker]);
-      // Highlight active track
-      this.setActiveMarker(this.trackId);
+    addTrackNearby: function(trackObj) {
+      var self = this;
+      SC.get('/tracks/' + trackObj.get("id"), function(track) { 
+        var title = track.user.username + ": " + track.title;
+        if (track.artwork_url)
+          var artwork = track.artwork_url;
+        else
+          var artwork = track.user.avatar_url;
+
+        var marker = self.addTrackToMap(trackObj.get("id"), trackObj.get("position"), artwork, title, true); 
+        self.tracksAvailableMarkers.push([trackObj.id, marker]);         
+      });  
     },
 
     resetTracksNearby: function() {
@@ -259,39 +284,42 @@ function getCookie(c_name)
     // Show tracks on map
     //
     //------------------------------
-    addTrackToMap: function(trackObj, available) {
-      var trackId = trackObj.get("trackId");
+    addTrackToMap: function(trackId, position, artworkUrl, title, available) {
+        var iconsize = 30;
+
+      var image = {
+        url: artworkUrl,
+        size: new google.maps.Size(iconsize, iconsize),
+        origin: new google.maps.Point(0,0),
+        anchor: new google.maps.Point(iconsize/2, iconsize),
+        scaledSize: new google.maps.Size(iconsize, iconsize)
+      };
+      var shape = {
+          coord: [1, 1, 1, iconsize, iconsize, iconsize, iconsize, 1],
+          type: 'poly'
+      };
+
       // Create marker 
-      var position = trackObj.get("position");
       var trackPos = new google.maps.LatLng(position.latitude, position.longitude);
       var marker = new google.maps.Marker({
         position: trackPos,
-        title:""
+        icon: image,
+        shape: shape,
+        title: title
       });
       marker.setMap(this.map);
-
-      if (available)
-        marker.setIcon("http://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
-      else
-        marker.setIcon("http://maps.google.com/mapfiles/ms/icons/red-dot.png");
-
-      // Get other track info from SC
-      SC.get('/tracks/' + trackId, function(track) { 
-        marker.setTitle(track.user.username + ": " + track.title);           
-      }); 
 
       return marker;
     },
 
     setActiveMarker: function(trackId) {
-      console.log("active " + trackId);
-      if (trackId != null) {
-        for (var i = 0; i < this.tracksAvailableMarkers.length; i++) {
-          var id = this.tracksAvailableMarkers[i][0];
-          if (id == trackId)
-            this.tracksAvailableMarkers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
-        }
-      }
+      //if (trackId != null) {
+        //for (var i = 0; i < this.tracksAvailableMarkers.length; i++) {
+          //var id = this.tracksAvailableMarkers[i][0];
+          //if (id == trackId)
+          //this.tracksAvailableMarkers[i][1].setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
+        //}
+      //}
     },
 
     deactivateMarkers: function(trackId) {
@@ -307,8 +335,9 @@ function getCookie(c_name)
     //
     //------------------------------  
     startTrail: function() {
-      if (streamingTrack)
+      if (streamingTrack) {
         streamingTrack.play({onfinish: this.playByPosition});
+      }
     },
 
     playByPosition: function() {
@@ -358,26 +387,45 @@ function getCookie(c_name)
       this.$el.find("#start").hide();
       var self = this;
       SC.get('/tracks/' + trackId, function(track) { 
-        self.$el.find("#track-info").html("Now playing: " + track.user.username + ", " + track.title);
+        if (track.artwork_url)
+          var artwork = track.artwork_url;
+        else
+          var artwork = track.user.avatar_url;
+        self.$el.find("#player-container").css("background-image", "url(" + artwork + ")");
+        self.$el.find("#trackinfo").html(track.user.username + "<br>" + track.title);
+        self.$el.find("#trackinfo").attr("href", track.permalink_url);
         self.$el.find("#player-container").show();          
       }); 
     },
 
-    pause: function() {
+    pauseStream: function() {
+      this.trackId = null;
       this.streamingTrack.pause();
       this.deactivateMarkers();
+      this.$el.find("#pausestream").hide(); 
+      this.$el.find("#resumestream").show(); 
     },
 
-    resume: function() {
+    resumeStream: function() {
       this.streamingTrack.resume();
       this.setActiveMarker(this.trackId);
+      this.$el.find("#pausestream").show(); 
+      this.$el.find("#resumestream").hide(); 
+    },
+
+    showPlaySound: function(trackId) {
+      this.$el.find("#loading").hide();
+      this.$el.find("#no-tracks").hide();
+      this.$el.find("#start-trail").show();
     },
 
     showNoTracksAvailable: function(trackId) {
       this.$el.find("#player-container").hide();
       this.$el.find("#track-info").html("");
-      this.$el.find("#status").html("Nothing nearby. Try going closer to a sound.");
-      this.$el.find("#start").show();
+
+      this.$el.find("#loading").hide();
+      this.$el.find("#start-trail").hide();
+      this.$el.find("#no-tracks").show();
     },
 
   });

@@ -5,10 +5,17 @@ html, body {
   padding: 0; }
 
 body {
-  background: #33cccf; }
+  background: #fff;
+  color: #00bff3;
+  font-family: Helvetica, Arial, sans-serif; }
   @media screen and (max-device-width: 480px) {
     body {
-      background: #272727; } }
+      background: #fff; } }
+
+a {
+  color: #00bff3; }
+  a:visited {
+    color: #00bff3; }
 
 #app-container {
   position: relative;
@@ -17,19 +24,69 @@ body {
 
 #map-canvas {
   width: 100%;
-  height: 80%; }
+  height: 100%; }
 
 #toolbar {
   width: 100%;
-  height: 20%;
-  position: fixed;
+  height: 80px;
+  position: absolute;
   bottom: 0;
-  left: 0; }
+  left: 0;
+  background: #fff; }
+  @media screen and (max-device-width: 480px) and (orientation: landscape) {
+    #toolbar {
+      height: 60px; } }
   #toolbar #start {
-    padding: 10px 20px;
-    text-align: center; }
-    #toolbar #start #status {
-      margin: 20px auto 0 autp; }
+    text-align: center;
+    border-top: 3px solid #00bff3; }
+    #toolbar #start .label {
+      display: inline-block;
+      margin-top: 30px; }
+    #toolbar #start #start-trail {
+      display: none;
+      font-size: 1em;
+      font-weight: bold;
+      text-transform: uppercase;
+      position: absolute;
+      margin: auto;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      cursor: pointer; }
+      #toolbar #start #start-trail .label {
+        background: url(../assets/play_icon.svg);
+        background-repeat: no-repeat;
+        padding-left: 20px; }
+    #toolbar #start #no-tracks {
+      display: none;
+      cursor: pointer; }
+      #toolbar #start #no-tracks .label {
+        margin-top: 15px; }
   #toolbar #player-container {
-    padding: 10px 20px;
-    display: none; }
+    display: none;
+    zoom: 1;
+    height: 80px;
+    padding-left: 80px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: relative; }
+    #toolbar #player-container:before, #toolbar #player-container:after {
+      content: "";
+      display: table; }
+    #toolbar #player-container:after {
+      clear: both; }
+    #toolbar #player-container #trackinfo {
+      display: block;
+      margin: 20px 10px 0 10px;
+      font-size: .9em; }
+    #toolbar #player-container #pausestream, #toolbar #player-container #resumestream {
+      position: absolute;
+      z-index: 20px;
+      cursor: pointer;
+      top: 8px;
+      right: 16px;
+      height: 18px; }
+    #toolbar #player-container #resumestream {
+      display: none; }
