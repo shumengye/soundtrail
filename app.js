@@ -111,7 +111,7 @@ function getCookie(c_name)
           'startTrail', 'playByPosition', 'pauseStream', 'resumeStream', 'showPlayer'); 
 
       // Update tracks when user position changes
-      this.listenTo(this.model, 'change', this.getTracksForPosition);  
+      //this.listenTo(this.model, 'change', this.getTracksForPosition);  
 
       // Track collections
       this.tracksNearby = new TrackCollection();
@@ -160,8 +160,7 @@ function getCookie(c_name)
         streetViewControl: false,
         mapTypeControl: false,
         zoomControlOptions: {
-
-        position: google.maps.ControlPosition.LEFT_TOP
+        position: google.maps.ControlPosition.LEFT_CENTER
         }
       } ;
       this.map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
@@ -169,9 +168,13 @@ function getCookie(c_name)
       // Current user location
       this.userMarker = new google.maps.Marker({
         position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
-        icon: "assets/userposition.svg"
+        icon: "assets/userposition.svg",
+        zIndex: 100
       });
       this.userMarker.setMap(this.map);
+
+      // Get all tracks
+      this.getTracksForPosition();
 
       // Redraw tracks when map bounds change
       google.maps.event.addListener(this.map, 'bounds_changed', this.getTracksForPosition);
@@ -180,6 +183,8 @@ function getCookie(c_name)
     onPositionChange: function(position) {
       console.log("Updating model position");
       this.model.setPosition(position.coords.latitude, position.coords.longitude);
+
+      this.userMarker.setPosition(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
     },
 
     //------------------------------
@@ -203,7 +208,7 @@ function getCookie(c_name)
       var distance = 0.1; // max distance in km
       query1.withinKilometers("position", userPosition, distance);
       query1.find().then(function(tracks) {  
-        if (tracks.length > 0)
+        if (tracks.length > 0 && self.streamingTrack == null)
           self.showPlaySound();
         if (tracks.length == 0 && self.$el.find("#loading").css("display") == "block") {
           self.$el.find("#loading").hide();
@@ -225,7 +230,7 @@ function getCookie(c_name)
       var query2 = new Parse.Query(Sound);
       query2.doesNotMatchKeyInQuery("trackId", "trackId", query1);
       query2.near("position", userPosition);
-      query2.limit(100);
+      query2.limit(50);
       query2.find().then(function(tracks) {
         for (var i = 0; i < tracks.length; i++) {
           var t = new Track({
@@ -358,12 +363,14 @@ function getCookie(c_name)
 
       query.find().then(function(tracks) {
         // Play nearest track
-        if (tracks.length == 0) 
+        if (tracks.length == 0) {
+          self.streamingTrack = null;
           self.showNoTracksAvailable();
+        }
         else{
-          console.log("Fetched track from Parse " + trackId);
           var trackId = tracks[0].get("trackId");
           self.trackId = trackId;
+          console.log("Fetched track from Parse " + trackId);
 
           SC.stream(trackId, {
             useHTML5Audio: true,
@@ -414,6 +421,7 @@ function getCookie(c_name)
     },
 
     showPlaySound: function(trackId) {
+      this.$el.find("#start").show();
       this.$el.find("#loading").hide();
       this.$el.find("#no-tracks").hide();
       this.$el.find("#start-trail").show();
@@ -426,6 +434,7 @@ function getCookie(c_name)
       this.$el.find("#loading").hide();
       this.$el.find("#start-trail").hide();
       this.$el.find("#no-tracks").show();
+      this.$el.find("#start").show();
     },
 
   });

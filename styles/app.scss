@@ -38,6 +38,14 @@ a {
 	}
 }
 
+#poweredlogo {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	z-index: 100;
+	width: 52px;
+}
+
 #app-container {
 	position: relative;
 	width: 100%;
@@ -56,6 +64,7 @@ a {
 	bottom: 0;
 	left: 0;
 	background: #fff;
+	border-top: 3px solid $maincolor;
 
 	@include iphone-landscape {
 		height: 60px;
@@ -63,7 +72,6 @@ a {
 	
 	#start {
 		text-align: center;
-		border-top: 3px solid $maincolor;
 
 		.label {
 			display: inline-block;
@@ -106,7 +114,7 @@ a {
 
 		#trackinfo {
 			display: block;
-			margin: 20px 10px 0 10px;
+			margin: 22px 10px 0 10px;
 			font-size: .9em;
 		}
 
@@ -114,9 +122,10 @@ a {
 			position: absolute;
 			z-index: 20px;
 			cursor: pointer;
-			top: 8px;
-			right: 16px;
+			top: 0px;
+			right: 0px;
 			height: 18px;
+			padding: 8px 16px;
 		}
 
 		#resumestream {
