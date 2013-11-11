@@ -210,7 +210,7 @@ function getCookie(c_name)
 
     render: function() {
       this.$el.append( this.model.get("username") + ", " + this.model.get("title") + ", " + this.model.get("id") );  
-      this.$el.append("<button id='add-to-map'>Add track to map</button>"); 
+      this.$el.append("<br><button id='add-to-map'>Add track to map</button>"); 
       return this;
     },
 
@@ -299,11 +299,11 @@ function getCookie(c_name)
 
     events: {
       'click .save': 'saveTrackLocation',
-      'click .cancel': 'cancelTrackLocation'
+      'click .cancel': 'closeSelectLocation'
     },
 
     initialize: function(){
-       _.bindAll(this, 'render', 'initMap', 'addLocationToTrack', 'saveTrackLocation', 'cancelTrackLocation'); 
+       _.bindAll(this, 'render', 'initMap', 'addLocationToTrack', 'saveTrackLocation', 'closeSelectLocation'); 
  
       // User login subview
       //this.loginView = new LoginView({ model: new UserLogin() });
@@ -357,11 +357,11 @@ function getCookie(c_name)
 
     addLocationToTrack: function(trackId) {
       this.trackId = trackId;
+      this.$el.find("search-container").hide();
       this.mapElem.css("visibility", "visible");
     },
 
     saveTrackLocation: function() {
-      //console.log("track " + this.trackId);
       if (!this.positionMarker.getPosition())
         return;
       var Sound = Parse.Object.extend("Sound");
@@ -372,11 +372,12 @@ function getCookie(c_name)
         latitude: this.positionMarker.getPosition().lat(), 
         longitude: this.positionMarker.getPosition().lng()
       }));
-       
+      
+      var self = this;
       sound.save(null, {
         success: function(sound) {
           console.log("track added to map");
-          this.mapElem.css("visibility", "hidden");
+          self.closeSelectLocation();
         },
         error: function(sound, error) {
           console.log(error);
@@ -385,8 +386,9 @@ function getCookie(c_name)
 
     },
 
-    cancelTrackLocation: function() {
+    closeSelectLocation: function() {
       this.mapElem.css("visibility", "hidden");
+      this.$el.find("search-container").show();
     }
 
   });
