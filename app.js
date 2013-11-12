@@ -77,9 +77,6 @@
           'addTrackToMap',
           'startTrail', 'playByPosition', 'pauseStream', 'resumeStream', 'showPlayer'); 
 
-      // Update tracks when user position changes
-      //this.listenTo(this.model, 'change', this.getTracksForPosition);  
-
       // Track collections
       this.tracksNearby = new TrackCollection();
       this.tracksNearby.on('add', this.addTrackNearby);
@@ -94,6 +91,8 @@
       this.tracksAvailableMarkers = [];
       this.tracksNearbyMarkers = [];
 
+      this.distance = 0.05;
+
       // User location
       if (navigator.geolocation) {
         // Init
@@ -101,6 +100,27 @@
         // Keep tracking user position 
         navigator.geolocation.watchPosition(this.onPositionChange);
       }
+       
+      /*
+      var self = this;
+      window.setTimeout(function() {
+        // lautsizer 52.496504, 13.427037
+        // manteufel 52.494934,13.432402
+
+        self.model.setPosition(52.496504, 13.427037); 
+        self.userMarker.setPosition(new google.maps.LatLng(52.496504, 13.427037));
+        console.log("Location " + self.model.getLatitude() + ", " + self.model.getLongitude());
+      }, 9400);
+
+      window.setTimeout(function() {
+        self.model.setPosition(52.494934,13.432402); 
+        self.userMarker.setPosition(new google.maps.LatLng(52.494934,13.432402));
+        console.log("Location " + self.model.getLatitude() + ", " + self.model.getLongitude());
+      }, 14000);
+      */
+
+      // Update tracks when user position changes
+      this.listenTo(this.model, 'change', this.getTracksForPosition);  
 
       // Playback
       this.streamingTrack = null;  // active track being played
@@ -117,6 +137,7 @@
 
     initMap: function(position) {    
       this.model.setPosition(position.coords.latitude, position.coords.longitude);  
+
       // Init map
       google.maps.visualRefresh = true;
       var mapOptions = {
@@ -144,7 +165,7 @@
       this.getTracksForPosition();
 
       // Redraw tracks when map bounds change
-      google.maps.event.addListener(this.map, 'bounds_changed', this.getTracksForPosition);
+      //google.maps.event.addListener(this.map, 'bounds_changed', this.getTracksForPosition);
     },
 
     onPositionChange: function(position) {
@@ -162,6 +183,11 @@
     getTracksForPosition: function() {
       console.log("Update tracks for user position");
 
+      // No need to fetch data if track is still playing
+      if (this.streamingTrack != null && this.streamingTrack.playState == 1) {
+        return;
+      }
+
       var Sound = Parse.Object.extend("Sound");
       var userPosition = new Parse.GeoPoint({ latitude: this.model.getLatitude(), longitude: this.model.getLongitude() });
       var self = this;  
@@ -172,15 +198,25 @@
 
       // Available tracks for current location
       var query1 = new Parse.Query(Sound);
-      var distance = 0.1; // max distance in km
-      query1.withinKilometers("position", userPosition, distance);
+      query1.withinKilometers("position", userPosition, this.distance);
       query1.find().then(function(tracks) {  
-        if (tracks.length > 0 && self.streamingTrack == null)
-          self.showPlaySound();
-        if (tracks.length == 0 && self.$el.find("#loading").css("display") == "block") {
-          self.$el.find("#loading").hide();
-          self.$el.find("#no-tracks").show();
+
+        if (tracks.length == 0) {
+          if (self.$el.find("#loading").css("display") == "block")
+            self.showNoTracksAvailable();
+          if (self.streamingTrack != null && self.streamingTrack.paused)
+            self.showNoTracksAvailable();
+          if (self.streamingTrack == null)
+            self.showNoTracksAvailable();
         }
+        else if (tracks.length > 0) {
+          console.log("Available tracks found. Current stream " + self.streamingTrack);
+          if (self.$el.find("#loading").css("display") == "block")
+            self.showPlaySound();
+          if (self.streamingTrack == null)
+            self.showPlaySound();
+        }
+
 
         for (var i = 0; i < tracks.length; i++) {
           var t = new Track({
@@ -219,6 +255,7 @@
           var artwork = track.artwork_url;
         else
           var artwork = track.user.avatar_url;
+        //console.log(trackObj.get("id") + ", " + title);
 
         var marker = self.addTrackToMap(trackObj.get("id"), trackObj.get("position"), artwork, title, true); 
         self.tracksAvailableMarkers.push([trackObj.id, marker]);         
@@ -239,6 +276,7 @@
           var artwork = track.artwork_url;
         else
           var artwork = track.user.avatar_url;
+        //console.log(trackObj.get("id") + ", " + title);
 
         var marker = self.addTrackToMap(trackObj.get("id"), trackObj.get("position"), artwork, title, true); 
         self.tracksAvailableMarkers.push([trackObj.id, marker]);         
@@ -321,20 +359,19 @@
         longitude: this.model.getLongitude()
       });
 
-      var Sound = Parse.Object.extend("Sound");
-      var query = new Parse.Query(Sound);
-      //query.near("position", userPosition);
-      var distance = 0.1; // max distance in km
-      query.withinKilometers("position", userPosition, distance);
       var self = this;
 
+      var Sound = Parse.Object.extend("Sound");
+      var query = new Parse.Query(Sound);
+      query.withinKilometers("position", userPosition, this.distance);
       query.find().then(function(tracks) {
-        // Play nearest track
+        // No tracks found
         if (tracks.length == 0) {
           self.streamingTrack = null;
           self.showNoTracksAvailable();
         }
-        else{
+        // Play nearest track
+        else {
           var trackId = tracks[0].get("trackId");
           self.trackId = trackId;
           console.log("Fetched track from Parse " + trackId);
@@ -388,10 +425,13 @@
     },
 
     showPlaySound: function(trackId) {
-      this.$el.find("#start").show();
+      this.$el.find("#player-container").hide();
+      this.$el.find("#track-info").html("");
+
       this.$el.find("#loading").hide();
       this.$el.find("#no-tracks").hide();
       this.$el.find("#start-trail").show();
+      this.$el.find("#start").show();
     },
 
     showNoTracksAvailable: function(trackId) {

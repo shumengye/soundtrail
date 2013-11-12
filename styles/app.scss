@@ -159,6 +159,19 @@ a {
 		z-index: 20;
 	}
 
+	.title {
+		width: 100%;
+		position: absolute;
+		top: 0px;
+		left: 0;
+		right: 0;
+		margin: 0 auto;
+		z-index: 30;
+		text-align: center;
+		background: white;
+		padding: 10px;
+	}
+
 	.mapbuttons {
 		width: 260px;
 		position: absolute;

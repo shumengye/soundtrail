@@ -259,7 +259,7 @@ function getCookie(c_name)
       this.collection.reset();
 
       var self = this;
-      SC.get('/tracks', { q: this.input.val() }, function(tracks, error) {
+      SC.get('/tracks', { q: this.input.val(), filter: "streamable" }, function(tracks, error) {
           _.each(tracks, function(value, index){
               
               var t = new Track({
@@ -351,12 +351,14 @@ function getCookie(c_name)
 
       var self = this;
       google.maps.event.addListener(this.map, 'click', function(event) {
+        
         self.positionMarker.setPosition(event.latLng);
       });
     },
 
     addLocationToTrack: function(trackId) {
       this.trackId = trackId;
+      //this.positionMarker = null;
       this.$el.find("search-container").hide();
       this.mapElem.css("visibility", "visible");
     },
