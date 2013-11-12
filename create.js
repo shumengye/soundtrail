@@ -359,7 +359,7 @@ function getCookie(c_name)
     addLocationToTrack: function(trackId) {
       this.trackId = trackId;
       //this.positionMarker = null;
-      this.$el.find("search-container").hide();
+      this.$el.find("#search-container").hide();
       this.mapElem.css("visibility", "visible");
     },
 
@@ -390,7 +390,7 @@ function getCookie(c_name)
 
     closeSelectLocation: function() {
       this.mapElem.css("visibility", "hidden");
-      this.$el.find("search-container").show();
+      this.$el.find("#search-container").show();
     }
 
   });
