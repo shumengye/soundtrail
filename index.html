@@ -12,30 +12,82 @@
 
 <body>
 
-<img id='poweredlogo' src="assets/powered_by_white.png">
-<a href="create.html"><img id='addbutton' src="assets/add_icon.svg"></a>
 
-<div id="app-container">
-	<div id="map-canvas"></div>
-	<div id="toolbar">
-		<div id="start">
-			<div id='start-trail'>
-				<div class="label">Play sound</div>
-			</div>
-			<div id="no-tracks">
-				<div class="label">No sounds nearby.<br>Try moving closer to a sound.</div>
-			</div>
-			<div id="loading">
-				<div class="label">Fetching sounds near you...</div>
-			</div>
+<div id="app-container"></div>
+<div id="create-container"></div>
+
+<!-- Add track to map mode, search track template -->
+<script type="text/template" id="create-template">
+</script>
+
+<!-- Add track to map mode, search track template -->
+<script type="text/template" id="search-track-template">
+	<div id="search-container">
+		<input type="text" id="search-field">
+		<button id="search">Search for sound</button>
+		<div id="search-result"></div>
+	</div>
+</script>
+
+<!-- Single track in search results, track template -->
+<script type="text/template" id="track-searchresult-template">
+	<div class="track">
+		<%= track.get('username') + "&mdash;" + track.get('title') %>
+		<br><button id="add-to-map">Add track to map</button>
+	</div>
+</script>
+
+<!-- Map for attach location to track -->
+<script type="text/template" id="track-add-location-template">
+	<div id="track-location-map">
+		<div class="title">Click map to set track location</div>
+		<div id="map-canvas2"></div>
+
+		<div class="mapbuttons">
+			<span class="cancel">Cancel</span>
+			<span class="save">Save location</span>
 		</div>
-		<div id="player-container">
-			<a id="trackinfo" href="" target="_blank"></a>
+	</div>
+</script>
+
+
+<!-- Default mode, show tracks on map -->
+<script type="text/template" id="app-template">
+	<a id="addbutton" href="index.html#add">Add new</a>
+	<div id="map-canvas"></div>
+	<img id='poweredlogo' src="assets/powered_by_white.png">
+</script>
+
+<!-- Player template: simple message -->
+<script type="text/template" id="player-simple-template">
+	<div id="player-container">
+		<div id="simple">
+			<div class="label"><%= message %></div>
+		</div>
+	</div> 
+</script>
+
+<!-- Player template: no tracks -->
+<script type="text/template" id="player-track-available-template">
+	<div id="player-container">
+		<div id="start-trail">
+			<div class="label">Play sound</div>
+		</div>
+	</div> 
+</script>
+
+<!-- Player template: playable track -->
+<script type="text/template" id="player-track-playing-template">
+	<div id="player-container">
+		<div id="track-container" style="background-image: url(<%= track.get('artwork_url') %>)">
+			<a id="trackinfo" href="<%= track.get('permalink_url') %>" target="_blank">
+				<%= track.get('username') %><br><%= track.get('title') %>
+			</a>
 			<img id='pausestream' src="assets/pause_icon.svg">
 			<img id='resumestream' src="assets/play_icon.svg">
 		</div>
-	</div>
-</div>
+	</div> 
+</script>
 
 
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>

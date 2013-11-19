@@ -51,7 +51,11 @@ a {
 	top: 20px;
 	right: 30px;
 	z-index: 100;
-	width: 40px;
+	padding: 10px 20px;
+	@include border-radius(5px);
+	background: $maincolor;
+	color: #fff;
+	text-decoration: none;
 
 	@include iphone {
 		top: 15px;
@@ -70,7 +74,7 @@ a {
 	height: 100%;
 }
 
-#toolbar {
+#player-container {
 	width: 100%;
 	height: 80px;
 	position: absolute;
@@ -81,43 +85,37 @@ a {
 
 	@include iphone-landscape {
 		height: 60px;
+	}	
+}
+
+#start-trail {
+	font-size: 1em;
+	font-weight: bold;
+	text-transform: uppercase;
+	@include centered;
+	text-align: center;
+	cursor: pointer;
+
+	.label {
+		display: inline-block;
+		margin-top: 30px;
+		background: url(../assets/play_icon.svg);
+		background-repeat: no-repeat;
+		padding-left: 20px;
 	}
-	
-	#start {
-		text-align: center;
+}
 
-		.label {
-			display: inline-block;
-			margin-top: 30px;
-		}
+#simple {
+	cursor: pointer;
+	text-align: center;
 
-		#start-trail {
-			display: none;
-			font-size: 1em;
-			font-weight: bold;
-			text-transform: uppercase;
-			@include centered;
-			cursor: pointer;
-
-			.label {
-				background: url(../assets/play_icon.svg);
-				background-repeat: no-repeat;
-				padding-left: 20px;
-			}
-		}
-
-		#no-tracks {
-			display: none;
-			cursor: pointer;
-
-			.label {
-				margin-top: 15px;
-			}
-		}
+	.label {
+		display: inline-block;
+		margin-top: 15px;
 	}
-	
-	#player-container {
-		display: none;
+}
+
+#track-container {
 		@include clearfix;
 		height: 80px;
 		padding-left: 80px;
@@ -144,13 +142,32 @@ a {
 		#resumestream {
 			display: none;
 		}
+}
+
+#search-container {
+	padding: 20px;
+
+	#search-result {
+		margin-top: 10px;
+
+		.track {
+			padding: 10px 0;
+
+			button {
+				margin-top: 5px;
+			}
+		}
 	}
 }
 
-#map-container {
-	visibility: hidden;
+#track-location-map {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
 
-	#create-map {
+	#map-canvas2 {
 		width: 100%;
 		height: 100%;
 		position: absolute;
@@ -158,6 +175,7 @@ a {
 		left: 0;
 		z-index: 20;
 	}
+
 
 	.title {
 		width: 100%;

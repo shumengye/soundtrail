@@ -29,7 +29,18 @@ a {
   top: 20px;
   right: 30px;
   z-index: 100;
-  width: 40px; }
+  padding: 10px 20px;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  -ms-border-radius: 5px;
+  -o-border-radius: 5px;
+  border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-background-clip: padding-box;
+  background-clip: padding-box;
+  background: #00bff3;
+  color: #fff;
+  text-decoration: none; }
   @media screen and (max-device-width: 480px) {
     #addbutton {
       top: 15px;
@@ -44,7 +55,7 @@ a {
   width: 100%;
   height: 100%; }
 
-#toolbar {
+#player-container {
   width: 100%;
   height: 80px;
   position: absolute;
@@ -53,73 +64,86 @@ a {
   background: #fff;
   border-top: 3px solid #00bff3; }
   @media screen and (max-device-width: 480px) and (orientation: landscape) {
-    #toolbar {
+    #player-container {
       height: 60px; } }
-  #toolbar #start {
-    text-align: center; }
-    #toolbar #start .label {
-      display: inline-block;
-      margin-top: 30px; }
-    #toolbar #start #start-trail {
-      display: none;
-      font-size: 1em;
-      font-weight: bold;
-      text-transform: uppercase;
-      position: absolute;
-      margin: auto;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 20;
-      cursor: pointer; }
-      #toolbar #start #start-trail .label {
-        background: url(../assets/play_icon.svg);
-        background-repeat: no-repeat;
-        padding-left: 20px; }
-    #toolbar #start #no-tracks {
-      display: none;
-      cursor: pointer; }
-      #toolbar #start #no-tracks .label {
-        margin-top: 15px; }
-  #toolbar #player-container {
-    display: none;
-    zoom: 1;
-    height: 80px;
-    padding-left: 80px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    position: relative; }
-    #toolbar #player-container:before, #toolbar #player-container:after {
-      content: "";
-      display: table; }
-    #toolbar #player-container:after {
-      clear: both; }
-    #toolbar #player-container #trackinfo {
-      display: block;
-      margin: 22px 10px 0 10px;
-      font-size: .9em; }
-    #toolbar #player-container #pausestream, #toolbar #player-container #resumestream {
-      position: absolute;
-      z-index: 20px;
-      cursor: pointer;
-      top: 0px;
-      right: 0px;
-      height: 18px;
-      padding: 8px 16px; }
-    #toolbar #player-container #resumestream {
-      display: none; }
 
-#map-container {
-  visibility: hidden; }
-  #map-container #create-map {
+#start-trail {
+  font-size: 1em;
+  font-weight: bold;
+  text-transform: uppercase;
+  position: absolute;
+  margin: auto;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  text-align: center;
+  cursor: pointer; }
+  #start-trail .label {
+    display: inline-block;
+    margin-top: 30px;
+    background: url(../assets/play_icon.svg);
+    background-repeat: no-repeat;
+    padding-left: 20px; }
+
+#simple {
+  cursor: pointer;
+  text-align: center; }
+  #simple .label {
+    display: inline-block;
+    margin-top: 15px; }
+
+#track-container {
+  zoom: 1;
+  height: 80px;
+  padding-left: 80px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  position: relative; }
+  #track-container:before, #track-container:after {
+    content: "";
+    display: table; }
+  #track-container:after {
+    clear: both; }
+  #track-container #trackinfo {
+    display: block;
+    margin: 22px 10px 0 10px;
+    font-size: .9em; }
+  #track-container #pausestream, #track-container #resumestream {
+    position: absolute;
+    z-index: 20px;
+    cursor: pointer;
+    top: 0px;
+    right: 0px;
+    height: 18px;
+    padding: 8px 16px; }
+  #track-container #resumestream {
+    display: none; }
+
+#search-container {
+  padding: 20px; }
+  #search-container #search-result {
+    margin-top: 10px; }
+    #search-container #search-result .track {
+      padding: 10px 0; }
+      #search-container #search-result .track button {
+        margin-top: 5px; }
+
+#track-location-map {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0; }
+  #track-location-map #map-canvas2 {
     width: 100%;
     height: 100%;
     position: absolute;
     top: 0;
     left: 0;
     z-index: 20; }
-  #map-container .title {
+  #track-location-map .title {
     width: 100%;
     position: absolute;
     top: 0px;
@@ -130,7 +154,7 @@ a {
     text-align: center;
     background: white;
     padding: 10px; }
-  #map-container .mapbuttons {
+  #track-location-map .mapbuttons {
     width: 260px;
     position: absolute;
     bottom: 20px;
@@ -139,7 +163,7 @@ a {
     margin: 0 auto;
     z-index: 20;
     text-align: center; }
-    #map-container .mapbuttons .cancel, #map-container .mapbuttons .save {
+    #track-location-map .mapbuttons .cancel, #track-location-map .mapbuttons .save {
       padding: 10px 20px;
       -webkit-border-radius: 5px;
       -moz-border-radius: 5px;
@@ -152,5 +176,5 @@ a {
       background: #00bff3;
       color: #fff;
       cursor: pointer; }
-    #map-container .mapbuttons .cancel {
+    #track-location-map .mapbuttons .cancel {
       background: #ababab; }
